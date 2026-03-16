@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}About | Safety AI{% endblock %}
+
+{% block head %}
+<style>
+    .about-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
+        margin-top: 32px;
+    }
+    
+    @media (max-width: 1024px) {
+        .about-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .feature-list {
+        list-style: none;
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        border-radius: var(--radius-md);
+        background: var(--bg-body);
+        border: 1px solid var(--border-light);
+        transition: var(--transition);
+    }
+    
+    .feature-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+        border-color: #BFDBFE;
+    }
+
+    .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-sm);
+        background: var(--secondary);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .tech-stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 24px;
+    }
+
+    .tech-badge {
+        padding: 8px 16px;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-light);
+        border-radius: 30px;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .tech-badge:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .hero-card {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #1E1B4B, #4F46E5);
+        color: white;
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+    <h1>About the System</h1>
+    <p>Discover the technology and intelligence behind Driver Safety AI.</p>
+</div>
+
+<div class="about-grid">
+    <!-- Hero Overview Card -->
+    <div class="card hero-card fade-in" style="animation-delay: 0.1s;">
+        <div style="display: flex; align-items: stretch; gap: 32px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 320px; display: flex; flex-direction: column; justify-content: center;">
+                <h3 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 16px; color: white;">Intelligent Driver Monitoring</h3>
+                <p style="color: rgba(255,255,255,0.9); line-height: 1.7; font-size: 1.05rem; margin-bottom: 24px;">
+                    The Driver Drowsiness Detection System represents a major leap in automotive safety. By leveraging deep computer vision and facial landmark detection models, the system precisely tracks the Eye Aspect Ratio (EAR) in real-time, capable of instantly identifying dangerous microsleeps before accidents happen.
+                </p>
+                <div style="display: flex; gap: 16px;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 12px 20px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.2);">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #60A5FA;">68</div>
+                        <div style="font-size: 0.875rem; color: rgba(255,255,255,0.8);">Facial Landmarks</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 12px 20px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.2);">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #60A5FA;">< 1s</div>
+                        <div style="font-size: 0.875rem; color: rgba(255,255,255,0.8);">Response Time</div>
+                    </div>
+                </div>
+            </div>
+            <div style="width: 100%; max-width: 360px; border-radius: var(--radius-md); overflow: hidden; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; padding: 40px;">
+                <i data-lucide="eye" style="width: 120px; height: 120px; color: rgba(255,255,255,0.9);"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Features Card -->
+    <div class="card fade-in" style="animation-delay: 0.2s;">
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">Core Features</h3>
+        <p style="color: var(--text-soft); font-size: 1rem;">Enterprise-grade capabilities built-in.</p>
+        
+        <div class="feature-list">
+            <div class="feature-item">
+                <div class="feature-icon"><i data-lucide="scan-face" style="width: 24px; height: 24px;"></i></div>
+                <div>
+                    <h4 style="font-weight: 600; font-size: 1.05rem; margin-bottom: 4px;">Facial Landmark Tracking</h4>
+                    <p style="font-size: 0.9375rem; color: var(--text-soft);">Constant evaluation of per-eye aspect ratios.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon" style="background: var(--danger-bg); color: var(--danger);"><i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i></div>
+                <div>
+                    <h4 style="font-weight: 600; font-size: 1.05rem; margin-bottom: 4px;">Instant Acoustic Alarms</h4>
+                    <p style="font-size: 0.9375rem; color: var(--text-soft);">Zero-latency high frequency alerts upon threshold breach.</p>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon" style="background: var(--success-bg); color: var(--success);"><i data-lucide="database" style="width: 24px; height: 24px;"></i></div>
+                <div>
+                    <h4 style="font-weight: 600; font-size: 1.05rem; margin-bottom: 4px;">Automated Evidence Logging</h4>
+                    <p style="font-size: 0.9375rem; color: var(--text-soft);">Captures screenshots and structured database entries.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stack Architecture Card -->
+    <div class="card fade-in" style="animation-delay: 0.3s; display: flex; flex-direction: column;">
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">Technology Architecture</h3>
+        <p style="color: var(--text-soft); font-size: 1rem; margin-bottom: 16px;">Powered by industry-standard frameworks and models.</p>
+        
+        <div class="tech-stack" style="flex-grow: 1;">
+            <div class="tech-badge">
+                <i data-lucide="server" style="width: 16px; height: 16px;"></i> Flask Backend
+            </div>
+            <div class="tech-badge">
+                <i data-lucide="code" style="width: 16px; height: 16px;"></i> Python 3 Engine
+            </div>
+            <div class="tech-badge">
+                <i data-lucide="camera" style="width: 16px; height: 16px;"></i> OpenCV Vision
+            </div>
+            <div class="tech-badge">
+                <i data-lucide="focus" style="width: 16px; height: 16px;"></i> Dlib AI Models
+            </div>
+            <div class="tech-badge">
+                <i data-lucide="database" style="width: 16px; height: 16px;"></i> SQLite DB
+            </div>
+            <div class="tech-badge">
+                <i data-lucide="layout-template" style="width: 16px; height: 16px;"></i> Vanilla CSS + Lucide
+            </div>
+        </div>
+        
+        <div style="margin-top: 32px; padding: 20px; background-color: var(--bg-body); border-radius: var(--radius-md); border: 1px solid var(--border-light); display: flex; gap: 16px;">
+            <i data-lucide="info" style="width: 24px; height: 24px; color: var(--primary); flex-shrink: 0; margin-top: 2px;"></i>
+            <p style="font-size: 0.9375rem; color: var(--text-soft); line-height: 1.6;">
+                <strong style="color: var(--text-main);">Scientific Approach:</strong> The core logic utilizes the EAR (Eye Aspect Ratio) metric, an elegant mathematical formula replacing computationally expensive image processing approaches with a single scalar value.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

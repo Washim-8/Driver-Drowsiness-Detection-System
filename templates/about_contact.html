@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About & Contact | Washim Shaikh</title>
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='icon.jpeg') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #0F766E;
+            --primary-hover: #0D6259;
+            --bg-gradient-start: #F8FAF9;
+            --bg-gradient-end: #E6F4F1;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #1F2937;
+            --text-soft: #6B7280;
+            --border: rgba(15, 118, 110, 0.1);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            transition: var(--transition);
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            --bg-gradient-start: #0F172A;
+            --bg-gradient-end: #1E293B;
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --text-main: #F1F5F9;
+            --text-soft: #94A3B8;
+            --border: rgba(148, 163, 184, 0.1);
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-soft);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .dark-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dark-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 32px 80px;
+        }
+
+        /* Glass Card */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 48px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .glass-card.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .glass-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-4px);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-header i {
+            color: var(--primary);
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* About Section */
+        .about-content p {
+            font-size: 1.125rem;
+            color: var(--text-soft);
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .skill-badge {
+            background: linear-gradient(135deg, var(--primary), #14B8A6);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+            transition: var(--transition);
+        }
+
+        .skill-badge:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(15, 118, 110, 0.3);
+        }
+
+        /* Contact Section */
+        .contact-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .contact-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 12px;
+        }
+
+        .contact-header p {
+            font-size: 1.125rem;
+            color: var(--text-soft);
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin-top: 40px;
+        }
+
+        .contact-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .contact-item:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .contact-item i {
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+
+        .contact-item strong {
+            display: block;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .contact-item a {
+            color: var(--text-soft);
+            text-decoration: none;
+            transition: var(--transition);
+            word-break: break-word;
+        }
+
+        .contact-item:hover a {
+            color: var(--primary);
+        }
+
+        .cta-text {
+            text-align: center;
+            margin-top: 48px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 16px 20px;
+            }
+
+            .nav-links {
+                gap: 20px;
+            }
+
+            .container {
+                padding: 100px 20px 60px;
+            }
+
+            .glass-card {
+                padding: 32px 24px;
+            }
+
+            .section-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .contact-header h2 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                <i data-lucide="code-2" style="width: 28px; height: 28px;"></i>
+                Washim Shaikh
+            </a>
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-link">Home</a>
+                <a href="#about" class="nav-link active">About</a>
+                <a href="#contact" class="nav-link">Contact</a>
+                <button class="dark-toggle" id="darkToggle">
+                    <i data-lucide="moon" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- About Section -->
+        <section id="about">
+            <div class="glass-card fade-in">
+                <div class="section-header">
+                    <i data-lucide="user" style="width: 32px; height: 32px;"></i>
+                    <h2>About Me</h2>
+                </div>
+                <div class="about-content">
+                    <p>
+                        I'm a Computer Science Engineering student who builds intelligent systems that solve real problems. My work spans across AI, machine learning, and full-stack development, with a focus on creating applications that make a tangible impact.
+                    </p>
+                    <p>
+                        Over the past few years, I've worked on projects like AgriTrade—an e-auction platform connecting farmers directly with buyers—and built AI-powered systems for fraud detection, customer churn prediction, and driver drowsiness monitoring. I've also developed LLM-based chatbots, vision transformers for medical imaging, and financial tracking tools that help people manage their money smarter.
+                    </p>
+                    <p>
+                        What drives me is the challenge of turning complex problems into elegant solutions. Whether it's training a neural network, designing a scalable backend, or optimizing database queries, I'm always looking for ways to build systems that are both powerful and practical. I've completed internships in AI, machine learning, full-stack development, and cloud computing, which have sharpened my ability to work across the entire tech stack.
+                    </p>
+                </div>
+
+                <div class="skills-grid">
+                    <div class="skill-badge">Python & Java</div>
+                    <div class="skill-badge">Machine Learning</div>
+                    <div class="skill-badge">Web Development</div>
+                    <div class="skill-badge">AI & LLMs</div>
+                    <div class="skill-badge">Database Design</div>
+                    <div class="skill-badge">Cloud (AWS)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact">
+            <div class="glass-card fade-in" style="animation-delay: 0.2s;">
+                <div class="contact-header">
+                    <h2>Let's Build Something Great</h2>
+                    <p>I'm always open to new opportunities, collaborations, or interesting project ideas. Whether you're looking to build something from scratch or improve an existing system, feel free to reach out.</p>
+                </div>
+
+                <div class="contact-grid">
+                    <div class="contact-item">
+                        <i data-lucide="mail" style="width: 32px; height: 32px;"></i>
+                        <strong>Email</strong>
+                        <a href="mailto:washimshaikh33@gmail.com">washimshaikh33@gmail.com</a>
+                    </div>
+
+                    <div class="contact-item">
+                        <i data-lucide="phone" style="width: 32px; height: 32px;"></i>
+                        <strong>Phone</strong>
+                        <a href="tel:+918884958185">+91 8884958185</a>
+                    </div>
+
+                    <div class="contact-item">
+                        <i data-lucide="github" style="width: 32px; height: 32px;"></i>
+                        <strong>GitHub</strong>
+                        <a href="https://github.com/Washim-8" target="_blank">github.com/Washim-8</a>
+                    </div>
+
+                    <div class="contact-item">
+                        <i data-lucide="linkedin" style="width: 32px; height: 32px;"></i>
+                        <strong>LinkedIn</strong>
+                        <a href="https://www.linkedin.com/in/washim-shaikh-349868281/" target="_blank">View Profile</a>
+                    </div>
+                </div>
+
+                <p class="cta-text">Let's connect and create something impactful.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.glass-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Dark mode toggle
+        const darkToggle = document.getElementById('darkToggle');
+        const body = document.body;
+        const darkIcon = darkToggle.querySelector('i');
+
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-mode');
+            darkIcon.setAttribute('data-lucide', 'sun');
+            lucide.createIcons();
+        }
+
+        darkToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            
+            if (body.classList.contains('dark-mode')) {
+                darkIcon.setAttribute('data-lucide', 'sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                darkIcon.setAttribute('data-lucide', 'moon');
+                localStorage.setItem('theme', 'light');
+            }
+            
+            lucide.createIcons();
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Update active nav link on scroll
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | Safety AI{% endblock %}
+
+{% block head %}
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 32px;
+        margin-top: 32px;
+    }
+
+    .status-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 48px;
+    }
+
+    .status-ring {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 32px;
+        transition: var(--transition);
+        background: var(--bg-surface);
+        z-index: 2;
+    }
+
+    .status-ring::before {
+        content: '';
+        position: absolute;
+        top: -12px;
+        left: -12px;
+        right: -12px;
+        bottom: -12px;
+        border-radius: 50%;
+        border: 2px dashed var(--border-light);
+        transition: var(--transition);
+        z-index: 1;
+        animation: spin-slow 15s linear infinite;
+    }
+
+    @keyframes spin-slow {
+        100% { transform: rotate(360deg); }
+    }
+
+    .status-idle .status-ring {
+        color: var(--primary);
+        box-shadow: 0 0 0 16px var(--secondary);
+    }
+    
+    .status-idle .status-ring::before {
+        border-color: #BFDBFE;
+    }
+
+    .status-running .status-ring {
+        color: var(--success);
+        box-shadow: 0 0 0 16px var(--success-bg);
+    }
+    
+    .status-running .status-ring::before {
+        border-color: #6EE7B7;
+        animation: spin-fast 4s linear infinite;
+    }
+
+    @keyframes spin-fast {
+        100% { transform: rotate(360deg); }
+    }
+
+    .status-error .status-ring {
+        color: var(--danger);
+        box-shadow: 0 0 0 16px var(--danger-bg);
+    }
+
+    .info-list {
+        list-style: none;
+        margin-top: 24px;
+    }
+
+    .info-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 16px;
+        border-radius: var(--radius-md);
+        background: var(--bg-body);
+        border: 1px solid var(--border-light);
+        transition: var(--transition);
+    }
+
+    .info-list li:hover {
+        border-color: #BFDBFE;
+        background: var(--secondary);
+    }
+
+    .info-list li i {
+        color: var(--primary);
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    
+    .info-text {
+        text-align: left;
+    }
+    
+    .info-title {
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 4px;
+    }
+    
+    .info-desc {
+        font-size: 0.9375rem;
+        color: var(--text-soft);
+        line-height: 1.5;
+    }
+    
+    .lucide-spin-fast {
+        animation: lucide-spin 1s linear infinite;
+    }
+    
+    @keyframes lucide-spin {
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+    <h1>System Dashboard</h1>
+    <p>Monitor and manage the real-time driver drowsiness detection engine.</p>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Engine Control Card -->
+    <div class="card status-card fade-in" style="animation-delay: 0.1s;" id="mainCard">
+        <div id="statusIcon" class="status-ring">
+            <i data-lucide="power" style="width: 56px; height: 56px; z-index: 10;"></i>
+        </div>
+        
+        <h3 id="statusTitle" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">System Idle</h3>
+        <p id="statusMessage" style="color: var(--text-soft); font-size: 1.05rem; margin-bottom: 32px;">Ready to begin monitoring driver alertness.</p>
+        
+        <div style="display: flex; gap: 16px; justify-content: center; width: 100%;">
+            <button id="startBtn" class="btn btn-primary" style="width: 100%; max-width: 200px;">
+                <i data-lucide="play" style="width: 20px; height: 20px;"></i>
+                Start Engine
+            </button>
+            <button id="stopBtn" class="btn btn-danger" style="display: none; width: 100%; max-width: 200px;">
+                <i data-lucide="square" style="width: 20px; height: 20px;"></i>
+                Stop Engine
+            </button>
+        </div>
+    </div>
+
+    <!-- Instructions Card -->
+    <div class="card fade-in" style="animation-delay: 0.2s;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <i data-lucide="shield" style="color: var(--primary);"></i>
+            <h3 style="font-size: 1.5rem; font-weight: 700;">Operational Guidelines</h3>
+        </div>
+        <p style="color: var(--text-soft); font-size: 1.05rem; margin-bottom: 24px;">Please follow these steps for optimal AI detection accuracy.</p>
+        
+        <ul class="info-list">
+            <li>
+                <i data-lucide="camera" style="width: 24px; height: 24px;"></i>
+                <div class="info-text">
+                    <div class="info-title">Position Web Camera</div>
+                    <div class="info-desc">Ensure your camera has a clear, unobstructed view of the driver's face. Good lighting improves detection rates significantly.</div>
+                </div>
+            </li>
+            <li>
+                <i data-lucide="bell-ring" style="width: 24px; height: 24px;"></i>
+                <div class="info-text">
+                    <div class="info-title">Audio Alert System</div>
+                    <div class="info-desc">When prolonged eye closure (microsleeps) is detected, a high-frequency alarm will be triggered automatically.</div>
+                </div>
+            </li>
+            <li>
+                <i data-lucide="x-circle" style="width: 24px; height: 24px;"></i>
+                <div class="info-text">
+                    <div class="info-title">Manual Override</div>
+                    <div class="info-desc">To terminate the monitoring window locally, click on the video feed window and press the 'q' key on your keyboard.</div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusMsg = document.getElementById("statusMessage");
+    const statusTitle = document.getElementById("statusTitle");
+    const statusIcon = document.getElementById("statusIcon");
+    const mainCard = document.getElementById("mainCard");
+
+    function updateStatusUI(state, message) {
+        statusMsg.textContent = message;
+        
+        mainCard.classList.remove("status-idle", "status-running", "status-error");
+        
+        if (state === "running") {
+            mainCard.classList.add("status-running");
+            statusTitle.textContent = "Monitoring Active";
+            statusTitle.style.color = "var(--success)";
+            statusIcon.innerHTML = '<i data-lucide="activity" style="width: 56px; height: 56px; z-index: 10;"></i>';
+            startBtn.style.display = "none";
+            stopBtn.style.display = "inline-flex";
+        } else if (state === "idle") {
+            mainCard.classList.add("status-idle");
+            statusTitle.textContent = "System Idle";
+            statusTitle.style.color = "var(--text-main)";
+            statusIcon.innerHTML = '<i data-lucide="power" style="width: 56px; height: 56px; z-index: 10;"></i>';
+            startBtn.style.display = "inline-flex";
+            stopBtn.style.display = "none";
+        } else if (state === "loading") {
+            mainCard.classList.add("status-idle");
+            statusTitle.textContent = "Initializing...";
+            statusTitle.style.color = "var(--primary)";
+            statusIcon.innerHTML = '<i data-lucide="loader-2" style="width: 56px; height: 56px; z-index: 10;" class="lucide-spin-fast"></i>';
+        }
+        
+        lucide.createIcons();
+    }
+
+    startBtn.addEventListener("click", function() {
+        startBtn.disabled = true;
+        updateStatusUI("loading", "Connecting to detection hardware...");
+        
+        fetch("/start_detection")
+            .then(response => response.json())
+            .then(data => {
+                startBtn.disabled = false;
+                if (data.status === "success") {
+                    updateStatusUI("running", "AI engine is analyzing facial landmarks.");
+                } else {
+                    updateStatusUI("idle", data.message);
+                }
+            })
+            .catch(error => {
+                startBtn.disabled = false;
+                updateStatusUI("idle", "Failed to connect to AI engine.");
+            });
+    });
+
+    stopBtn.addEventListener("click", function() {
+        stopBtn.disabled = true;
+        updateStatusUI("loading", "Shutting down the engine...");
+        
+        fetch("/stop_detection")
+            .then(response => response.json())
+            .then(data => {
+                stopBtn.disabled = false;
+                updateStatusUI("idle", "Ready to begin monitoring driver alertness.");
+            })
+            .catch(error => {
+                stopBtn.disabled = false;
+                updateStatusUI("idle", "Failed to terminate engine.");
+            });
+    });
+
+    // Check status on page load
+    window.addEventListener('load', function() {
+        fetch("/status")
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "running") {
+                    updateStatusUI("running", "AI engine is analyzing facial landmarks.");
+                } else {
+                    updateStatusUI("idle", "Ready to begin monitoring driver alertness.");
+                }
+            });
+    });
+</script>
+{% endblock %}
