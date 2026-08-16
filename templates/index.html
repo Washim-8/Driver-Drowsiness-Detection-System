@@ -318,20 +318,78 @@ const earMeterFill      = document.getElementById("earMeterFill");
 
 const ctx = overlayCanvas.getContext("2d");
 
-// ── Audio alarm (Web Audio API beep — no file needed) ─────────────────────────
-let audioCtx = null;
-function playBeep() {
+// ── Audio alarm (Web Audio API — continuous wailing siren) ────────────────────
+let audioCtx      = null;
+let alarmOsc      = null;   // main oscillator
+let alarmOsc2     = null;   // harmony layer
+let alarmGain     = null;
+let alarmLFO      = null;   // LFO that sweeps pitch up/down for siren effect
+let alarmLFOGain  = null;
+
+function startAlarm() {
+    if (alarmOsc) return;   // already playing
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc  = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = "square";
-    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
-    osc.start(audioCtx.currentTime);
-    osc.stop(audioCtx.currentTime + 0.6);
+
+    // Master gain — fade in quickly
+    alarmGain = audioCtx.createGain();
+    alarmGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    alarmGain.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime + 0.15);
+    alarmGain.connect(audioCtx.destination);
+
+    // LFO sweeps the pitch between ~600 Hz and ~1100 Hz at ~1.8 Hz → classic siren
+    alarmLFO     = audioCtx.createOscillator();
+    alarmLFOGain = audioCtx.createGain();
+    alarmLFO.type                    = "sine";
+    alarmLFO.frequency.value         = 1.8;        // sweeps per second
+    alarmLFOGain.gain.value          = 250;         // ±250 Hz sweep depth
+    alarmLFO.connect(alarmLFOGain);
+
+    // Primary tone — sawtooth for a harsh, urgent tone
+    alarmOsc = audioCtx.createOscillator();
+    alarmOsc.type = "sawtooth";
+    alarmOsc.frequency.value = 850;                 // centre frequency
+    alarmLFOGain.connect(alarmOsc.frequency);       // LFO modulates pitch
+
+    // Second oscillator one octave lower — adds body & urgency
+    alarmOsc2 = audioCtx.createOscillator();
+    alarmOsc2.type = "square";
+    alarmOsc2.frequency.value = 425;
+    alarmLFOGain.connect(alarmOsc2.frequency);
+
+    // Light distortion via waveshaper
+    const waveShaper = audioCtx.createWaveShaper();
+    waveShaper.curve = makeDistortionCurve(30);
+    waveShaper.oversample = "2x";
+
+    alarmOsc.connect(waveShaper);
+    alarmOsc2.connect(waveShaper);
+    waveShaper.connect(alarmGain);
+
+    alarmLFO.start();
+    alarmOsc.start();
+    alarmOsc2.start();
+}
+
+function stopAlarm() {
+    if (!alarmOsc) return;
+    const t = audioCtx.currentTime;
+    // Fade out over 0.3 s to avoid a click
+    alarmGain.gain.setValueAtTime(alarmGain.gain.value, t);
+    alarmGain.gain.linearRampToValueAtTime(0, t + 0.3);
+    alarmOsc.stop(t + 0.35);
+    alarmOsc2.stop(t + 0.35);
+    alarmLFO.stop(t + 0.35);
+    alarmOsc = null; alarmOsc2 = null; alarmLFO = null;
+    alarmLFOGain = null; alarmGain = null;
+}
+
+function makeDistortionCurve(amount) {
+    const n = 256, curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+        const x = (i * 2) / n - 1;
+        curve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+    }
+    return curve;
 }
 
 // ── EAR formula ──────────────────────────────────────────────────────────────
@@ -414,7 +472,7 @@ function onResults(results) {
         if (counter >= CONSEC_FRAMES) {
             if (!alarmOn) {
                 alarmOn = true;
-                playBeep();
+                startAlarm();
                 logEvent(ear);
                 updateStatusUI("alert", "Drowsiness detected! Stay alert.");
             }
@@ -422,7 +480,10 @@ function onResults(results) {
         }
     } else {
         counter = 0;
-        alarmOn = false;
+        if (alarmOn) {
+            alarmOn = false;
+            stopAlarm();
+        }
         drowsinessBanner.style.display = "none";
         if (mainCard.classList.contains("status-alert")) {
             updateStatusUI("running", "AI engine is analysing facial landmarks.");
@@ -493,6 +554,8 @@ async function startDetection() {
 async function stopDetection() {
     detectionOn = false;
     stopBtn.disabled = true;
+
+    stopAlarm();   // silence any active alarm immediately
 
     if (mpCamera) { await mpCamera.stop(); mpCamera = null; }
     if (faceMesh)  { faceMesh.close();      faceMesh  = null; }
