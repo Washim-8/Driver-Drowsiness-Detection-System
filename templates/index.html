@@ -3,6 +3,10 @@
 {% block title %}Dashboard | Safety AI{% endblock %}
 
 {% block head %}
+<!-- MediaPipe Face Mesh — runs entirely in the browser, no server webcam needed -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
 <style>
     .dashboard-grid {
         display: grid;
@@ -11,6 +15,7 @@
         margin-top: 32px;
     }
 
+    /* ── Status card ── */
     .status-card {
         display: flex;
         flex-direction: column;
@@ -36,10 +41,7 @@
     .status-ring::before {
         content: '';
         position: absolute;
-        top: -12px;
-        left: -12px;
-        right: -12px;
-        bottom: -12px;
+        top: -12px; left: -12px; right: -12px; bottom: -12px;
         border-radius: 50%;
         border: 2px dashed var(--border-light);
         transition: var(--transition);
@@ -47,42 +49,87 @@
         animation: spin-slow 15s linear infinite;
     }
 
-    @keyframes spin-slow {
-        100% { transform: rotate(360deg); }
-    }
+    @keyframes spin-slow  { 100% { transform: rotate(360deg); } }
+    @keyframes spin-fast  { 100% { transform: rotate(360deg); } }
+    @keyframes lucide-spin { 100% { transform: rotate(360deg); } }
 
-    .status-idle .status-ring {
-        color: var(--primary);
-        box-shadow: 0 0 0 16px var(--secondary);
-    }
-    
-    .status-idle .status-ring::before {
-        border-color: #BFDBFE;
-    }
+    .status-idle .status-ring    { color: var(--primary); box-shadow: 0 0 0 16px var(--secondary); }
+    .status-idle .status-ring::before { border-color: #BFDBFE; }
 
-    .status-running .status-ring {
-        color: var(--success);
-        box-shadow: 0 0 0 16px var(--success-bg);
-    }
-    
-    .status-running .status-ring::before {
-        border-color: #6EE7B7;
-        animation: spin-fast 4s linear infinite;
-    }
+    .status-running .status-ring { color: var(--success); box-shadow: 0 0 0 16px var(--success-bg); }
+    .status-running .status-ring::before { border-color: #6EE7B7; animation: spin-fast 4s linear infinite; }
 
-    @keyframes spin-fast {
-        100% { transform: rotate(360deg); }
-    }
+    .status-alert .status-ring   { color: var(--danger); box-shadow: 0 0 0 16px var(--danger-bg); }
+    .status-alert .status-ring::before { border-color: #FCA5A5; animation: spin-fast 1s linear infinite; }
 
-    .status-error .status-ring {
-        color: var(--danger);
-        box-shadow: 0 0 0 16px var(--danger-bg);
-    }
+    .status-error .status-ring   { color: var(--danger); box-shadow: 0 0 0 16px var(--danger-bg); }
 
-    .info-list {
-        list-style: none;
+    .lucide-spin-fast { animation: lucide-spin 1s linear infinite; }
+
+    /* ── Live video feed ── */
+    #videoContainer {
+        display: none;
+        position: relative;
+        width: 100%;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: #000;
         margin-top: 24px;
+        aspect-ratio: 4/3;
     }
+
+    #videoEl {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1); /* mirror */
+    }
+
+    #overlayCanvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        transform: scaleX(-1); /* mirror to match video */
+    }
+
+    #earBadge {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        background: rgba(0,0,0,0.65);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 999px;
+        backdrop-filter: blur(4px);
+        font-family: monospace;
+    }
+
+    #drowsinessBanner {
+        display: none;
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--danger);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.9rem;
+        padding: 8px 20px;
+        border-radius: 999px;
+        white-space: nowrap;
+        animation: pulse-badge 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse-badge {
+        from { opacity: 1; transform: translateX(-50%) scale(1); }
+        to   { opacity: 0.8; transform: translateX(-50%) scale(1.04); }
+    }
+
+    /* ── Info list ── */
+    .info-list { list-style: none; margin-top: 24px; }
 
     .info-list li {
         display: flex;
@@ -96,39 +143,41 @@
         transition: var(--transition);
     }
 
-    .info-list li:hover {
-        border-color: #BFDBFE;
-        background: var(--secondary);
+    .info-list li:hover { border-color: #BFDBFE; background: var(--secondary); }
+    .info-list li i     { color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+
+    .info-text   { text-align: left; }
+    .info-title  { font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+    .info-desc   { font-size: 0.9375rem; color: var(--text-soft); line-height: 1.5; }
+
+    /* ── EAR meter ── */
+    #earMeterWrap {
+        width: 100%;
+        margin-top: 16px;
+        display: none;
     }
 
-    .info-list li i {
-        color: var(--primary);
-        flex-shrink: 0;
-        margin-top: 2px;
-    }
-    
-    .info-text {
-        text-align: left;
-    }
-    
-    .info-title {
-        font-weight: 600;
-        color: var(--text-main);
-        margin-bottom: 4px;
-    }
-    
-    .info-desc {
-        font-size: 0.9375rem;
+    #earMeterLabel {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
         color: var(--text-soft);
-        line-height: 1.5;
+        margin-bottom: 6px;
     }
-    
-    .lucide-spin-fast {
-        animation: lucide-spin 1s linear infinite;
+
+    #earMeterBar {
+        height: 8px;
+        background: var(--border-light);
+        border-radius: 999px;
+        overflow: hidden;
     }
-    
-    @keyframes lucide-spin {
-        100% { transform: rotate(360deg); }
+
+    #earMeterFill {
+        height: 100%;
+        width: 60%;
+        border-radius: 999px;
+        background: var(--success);
+        transition: width 0.15s ease, background 0.3s ease;
     }
 </style>
 {% endblock %}
@@ -136,59 +185,88 @@
 {% block content %}
 <div class="page-header fade-in">
     <h1>System Dashboard</h1>
-    <p>Monitor and manage the real-time driver drowsiness detection engine.</p>
+    <p>Monitor and manage real-time driver drowsiness detection — powered by your browser camera.</p>
 </div>
 
 <div class="dashboard-grid">
-    <!-- Engine Control Card -->
+
+    <!-- ── Engine Control Card ── -->
     <div class="card status-card fade-in" style="animation-delay: 0.1s;" id="mainCard">
         <div id="statusIcon" class="status-ring">
-            <i data-lucide="power" style="width: 56px; height: 56px; z-index: 10;"></i>
+            <i data-lucide="power" style="width:56px;height:56px;z-index:10;"></i>
         </div>
-        
-        <h3 id="statusTitle" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">System Idle</h3>
-        <p id="statusMessage" style="color: var(--text-soft); font-size: 1.05rem; margin-bottom: 32px;">Ready to begin monitoring driver alertness.</p>
-        
-        <div style="display: flex; gap: 16px; justify-content: center; width: 100%;">
-            <button id="startBtn" class="btn btn-primary" style="width: 100%; max-width: 200px;">
-                <i data-lucide="play" style="width: 20px; height: 20px;"></i>
+
+        <h3 id="statusTitle"   style="font-size:1.5rem;font-weight:700;margin-bottom:8px;">System Idle</h3>
+        <p  id="statusMessage" style="color:var(--text-soft);font-size:1.05rem;margin-bottom:32px;">
+            Click <strong>Start Engine</strong> — your browser will ask for camera permission.
+        </p>
+
+        <!-- EAR meter (shown while running) -->
+        <div id="earMeterWrap">
+            <div id="earMeterLabel">
+                <span>Eye Openness (EAR)</span>
+                <span id="earValue">—</span>
+            </div>
+            <div id="earMeterBar"><div id="earMeterFill"></div></div>
+        </div>
+
+        <div style="display:flex;gap:16px;justify-content:center;width:100%;margin-top:28px;">
+            <button id="startBtn" class="btn btn-primary" style="width:100%;max-width:200px;">
+                <i data-lucide="play" style="width:20px;height:20px;"></i>
                 Start Engine
             </button>
-            <button id="stopBtn" class="btn btn-danger" style="display: none; width: 100%; max-width: 200px;">
-                <i data-lucide="square" style="width: 20px; height: 20px;"></i>
+            <button id="stopBtn" class="btn btn-danger" style="display:none;width:100%;max-width:200px;">
+                <i data-lucide="square" style="width:20px;height:20px;"></i>
                 Stop Engine
             </button>
         </div>
+
+        <!-- Live video feed (shown after camera permission granted) -->
+        <div id="videoContainer">
+            <video id="videoEl" playsinline autoplay muted></video>
+            <canvas id="overlayCanvas"></canvas>
+            <div id="earBadge">EAR: —</div>
+            <div id="drowsinessBanner">⚠ DROWSINESS DETECTED!</div>
+        </div>
     </div>
 
-    <!-- Instructions Card -->
+    <!-- ── Instructions Card ── -->
     <div class="card fade-in" style="animation-delay: 0.2s;">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <i data-lucide="shield" style="color: var(--primary);"></i>
-            <h3 style="font-size: 1.5rem; font-weight: 700;">Operational Guidelines</h3>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <i data-lucide="shield" style="color:var(--primary);"></i>
+            <h3 style="font-size:1.5rem;font-weight:700;">Operational Guidelines</h3>
         </div>
-        <p style="color: var(--text-soft); font-size: 1.05rem; margin-bottom: 24px;">Please follow these steps for optimal AI detection accuracy.</p>
-        
+        <p style="color:var(--text-soft);font-size:1.05rem;margin-bottom:24px;">
+            Follow these steps for optimal AI detection accuracy.
+        </p>
+
         <ul class="info-list">
             <li>
-                <i data-lucide="camera" style="width: 24px; height: 24px;"></i>
+                <i data-lucide="camera" style="width:24px;height:24px;"></i>
                 <div class="info-text">
-                    <div class="info-title">Position Web Camera</div>
-                    <div class="info-desc">Ensure your camera has a clear, unobstructed view of the driver's face. Good lighting improves detection rates significantly.</div>
+                    <div class="info-title">Allow Camera Access</div>
+                    <div class="info-desc">When prompted by your browser, click <em>Allow</em>. Detection runs entirely on-device — no video is sent to any server.</div>
                 </div>
             </li>
             <li>
-                <i data-lucide="bell-ring" style="width: 24px; height: 24px;"></i>
+                <i data-lucide="eye" style="width:24px;height:24px;"></i>
+                <div class="info-text">
+                    <div class="info-title">Face the Camera</div>
+                    <div class="info-desc">Keep your face clearly visible. Good lighting and a centred face improve detection accuracy.</div>
+                </div>
+            </li>
+            <li>
+                <i data-lucide="bell-ring" style="width:24px;height:24px;"></i>
                 <div class="info-text">
                     <div class="info-title">Audio Alert System</div>
-                    <div class="info-desc">When prolonged eye closure (microsleeps) is detected, a high-frequency alarm will be triggered automatically.</div>
+                    <div class="info-desc">An audio alarm plays automatically when prolonged eye closure is detected. Keep your volume on.</div>
                 </div>
             </li>
             <li>
-                <i data-lucide="x-circle" style="width: 24px; height: 24px;"></i>
+                <i data-lucide="database" style="width:24px;height:24px;"></i>
                 <div class="info-text">
-                    <div class="info-title">Manual Override</div>
-                    <div class="info-desc">To terminate the monitoring window locally, click on the video feed window and press the 'q' key on your keyboard.</div>
+                    <div class="info-title">Event Logging</div>
+                    <div class="info-desc">Each detected drowsiness event is logged to the server database with a timestamp and EAR value.</div>
                 </div>
             </li>
         </ul>
@@ -198,89 +276,285 @@
 
 {% block scripts %}
 <script>
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const statusMsg = document.getElementById("statusMessage");
-    const statusTitle = document.getElementById("statusTitle");
-    const statusIcon = document.getElementById("statusIcon");
-    const mainCard = document.getElementById("mainCard");
+// ─────────────────────────────────────────────────────────────────────────────
+// MediaPipe Face Mesh — Browser-side drowsiness detection
+// EAR (Eye Aspect Ratio) is computed from 6 landmarks per eye.
+// If EAR < threshold for N consecutive frames → drowsiness alert.
+// ─────────────────────────────────────────────────────────────────────────────
 
-    function updateStatusUI(state, message) {
-        statusMsg.textContent = message;
-        
-        mainCard.classList.remove("status-idle", "status-running", "status-error");
-        
-        if (state === "running") {
-            mainCard.classList.add("status-running");
-            statusTitle.textContent = "Monitoring Active";
-            statusTitle.style.color = "var(--success)";
-            statusIcon.innerHTML = '<i data-lucide="activity" style="width: 56px; height: 56px; z-index: 10;"></i>';
-            startBtn.style.display = "none";
-            stopBtn.style.display = "inline-flex";
-        } else if (state === "idle") {
-            mainCard.classList.add("status-idle");
-            statusTitle.textContent = "System Idle";
-            statusTitle.style.color = "var(--text-main)";
-            statusIcon.innerHTML = '<i data-lucide="power" style="width: 56px; height: 56px; z-index: 10;"></i>';
-            startBtn.style.display = "inline-flex";
-            stopBtn.style.display = "none";
-        } else if (state === "loading") {
-            mainCard.classList.add("status-idle");
-            statusTitle.textContent = "Initializing...";
-            statusTitle.style.color = "var(--primary)";
-            statusIcon.innerHTML = '<i data-lucide="loader-2" style="width: 56px; height: 56px; z-index: 10;" class="lucide-spin-fast"></i>';
-        }
-        
-        lucide.createIcons();
+// MediaPipe landmark indices for left & right eye (478-point mesh subset)
+// Using the standard 6-point EAR landmarks from the 468-point model:
+// Left eye:  [362, 385, 387, 263, 373, 380]
+// Right eye: [33,  160, 158, 133, 153, 144]
+const LEFT_EYE  = [362, 385, 387, 263, 373, 380];
+const RIGHT_EYE = [33,  160, 158, 133, 153, 144];
+
+const EAR_THRESHOLD   = 0.22;   // below this → eye is closing
+const CONSEC_FRAMES   = 25;     // consecutive frames before alert
+const EAR_NORMAL      = 0.30;   // rough "open eye" value for meter scaling
+
+let counter       = 0;
+let alarmOn       = false;
+let detectionOn   = false;
+let mpCamera      = null;
+let faceMesh      = null;
+let lastLoggedAt  = 0;           // throttle DB logs to 1 per 3 s
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const startBtn          = document.getElementById("startBtn");
+const stopBtn           = document.getElementById("stopBtn");
+const statusMsg         = document.getElementById("statusMessage");
+const statusTitle       = document.getElementById("statusTitle");
+const statusIcon        = document.getElementById("statusIcon");
+const mainCard          = document.getElementById("mainCard");
+const videoEl           = document.getElementById("videoEl");
+const overlayCanvas     = document.getElementById("overlayCanvas");
+const videoContainer    = document.getElementById("videoContainer");
+const earBadge          = document.getElementById("earBadge");
+const drowsinessBanner  = document.getElementById("drowsinessBanner");
+const earMeterWrap      = document.getElementById("earMeterWrap");
+const earValueEl        = document.getElementById("earValue");
+const earMeterFill      = document.getElementById("earMeterFill");
+
+const ctx = overlayCanvas.getContext("2d");
+
+// ── Audio alarm (Web Audio API beep — no file needed) ─────────────────────────
+let audioCtx = null;
+function playBeep() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = "square";
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.6);
+}
+
+// ── EAR formula ──────────────────────────────────────────────────────────────
+function dist(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function computeEAR(lm, indices) {
+    const [p1, p2, p3, p4, p5, p6] = indices.map(i => lm[i]);
+    const A = dist(p2, p6);
+    const B = dist(p3, p5);
+    const C = dist(p1, p4);
+    return (A + B) / (2.0 * C);
+}
+
+// ── Draw eye landmarks on canvas ──────────────────────────────────────────────
+function drawEye(lm, indices, color) {
+    ctx.beginPath();
+    indices.forEach((idx, i) => {
+        const pt = lm[idx];
+        const x  = pt.x * overlayCanvas.width;
+        const y  = pt.y * overlayCanvas.height;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+}
+
+// ── Update EAR meter UI ───────────────────────────────────────────────────────
+function updateMeter(ear) {
+    const pct = Math.min(100, Math.max(0, (ear / EAR_NORMAL) * 100));
+    earMeterFill.style.width      = pct + "%";
+    earMeterFill.style.background = ear < EAR_THRESHOLD ? "var(--danger)" : "var(--success)";
+    earValueEl.textContent        = ear.toFixed(3);
+    earBadge.textContent          = "EAR: " + ear.toFixed(3);
+}
+
+// ── Log event to Flask backend ────────────────────────────────────────────────
+function logEvent(ear) {
+    const now = Date.now();
+    if (now - lastLoggedAt < 3000) return;   // max once per 3 s
+    lastLoggedAt = now;
+    fetch("/log_event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ear: ear })
+    }).catch(() => {});   // fire-and-forget, ignore errors
+}
+
+// ── MediaPipe result callback ─────────────────────────────────────────────────
+function onResults(results) {
+    if (!detectionOn) return;
+
+    // Sync canvas size to video
+    overlayCanvas.width  = videoEl.videoWidth  || overlayCanvas.offsetWidth;
+    overlayCanvas.height = videoEl.videoHeight || overlayCanvas.offsetHeight;
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+        earBadge.textContent = "EAR: no face";
+        return;
     }
 
-    startBtn.addEventListener("click", function() {
-        startBtn.disabled = true;
-        updateStatusUI("loading", "Connecting to detection hardware...");
-        
-        fetch("/start_detection")
-            .then(response => response.json())
-            .then(data => {
-                startBtn.disabled = false;
-                if (data.status === "success") {
-                    updateStatusUI("running", "AI engine is analyzing facial landmarks.");
-                } else {
-                    updateStatusUI("idle", data.message);
-                }
-            })
-            .catch(error => {
-                startBtn.disabled = false;
-                updateStatusUI("idle", "Failed to connect to AI engine.");
-            });
-    });
+    const lm   = results.multiFaceLandmarks[0];
+    const earL = computeEAR(lm, LEFT_EYE);
+    const earR = computeEAR(lm, RIGHT_EYE);
+    const ear  = (earL + earR) / 2.0;
 
-    stopBtn.addEventListener("click", function() {
-        stopBtn.disabled = true;
-        updateStatusUI("loading", "Shutting down the engine...");
-        
-        fetch("/stop_detection")
-            .then(response => response.json())
-            .then(data => {
-                stopBtn.disabled = false;
-                updateStatusUI("idle", "Ready to begin monitoring driver alertness.");
-            })
-            .catch(error => {
-                stopBtn.disabled = false;
-                updateStatusUI("idle", "Failed to terminate engine.");
-            });
-    });
+    // Draw eye outlines — green when open, red when drowsy
+    const eyeColor = ear < EAR_THRESHOLD ? "#EF4444" : "#10B981";
+    drawEye(lm, LEFT_EYE,  eyeColor);
+    drawEye(lm, RIGHT_EYE, eyeColor);
 
-    // Check status on page load
-    window.addEventListener('load', function() {
-        fetch("/status")
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "running") {
-                    updateStatusUI("running", "AI engine is analyzing facial landmarks.");
-                } else {
-                    updateStatusUI("idle", "Ready to begin monitoring driver alertness.");
-                }
-            });
-    });
+    updateMeter(ear);
+
+    if (ear < EAR_THRESHOLD) {
+        counter++;
+        if (counter >= CONSEC_FRAMES) {
+            if (!alarmOn) {
+                alarmOn = true;
+                playBeep();
+                logEvent(ear);
+                updateStatusUI("alert", "Drowsiness detected! Stay alert.");
+            }
+            drowsinessBanner.style.display = "block";
+        }
+    } else {
+        counter = 0;
+        alarmOn = false;
+        drowsinessBanner.style.display = "none";
+        if (mainCard.classList.contains("status-alert")) {
+            updateStatusUI("running", "AI engine is analysing facial landmarks.");
+        }
+    }
+}
+
+// ── Start detection ───────────────────────────────────────────────────────────
+async function startDetection() {
+    startBtn.disabled = true;
+    updateStatusUI("loading", "Requesting camera permission…");
+
+    try {
+        // 1. Get user media — browser shows native permission prompt
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        videoEl.srcObject = stream;
+        await videoEl.play();
+
+        // 2. Init MediaPipe FaceMesh
+        faceMesh = new FaceMesh({
+            locateFile: file =>
+                `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        faceMesh.onResults(onResults);
+
+        // 3. Start camera loop via MediaPipe helper
+        mpCamera = new Camera(videoEl, {
+            onFrame: async () => {
+                await faceMesh.send({ image: videoEl });
+            },
+            width: 640,
+            height: 480
+        });
+        await mpCamera.start();
+
+        detectionOn = true;
+        videoContainer.style.display = "block";
+        earMeterWrap.style.display   = "block";
+        startBtn.style.display       = "none";
+        stopBtn.style.display        = "inline-flex";
+        startBtn.disabled            = false;
+        updateStatusUI("running", "AI engine is analysing facial landmarks.");
+
+    } catch (err) {
+        startBtn.disabled = false;
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+            updateStatusUI("error", "Camera permission denied. Please allow camera access in your browser and try again.");
+        } else if (err.name === "NotFoundError") {
+            updateStatusUI("error", "No camera found. Please connect a webcam and try again.");
+        } else {
+            updateStatusUI("error", "Could not start camera: " + err.message);
+        }
+        mainCard.classList.remove("status-idle");
+        mainCard.classList.add("status-error");
+        lucide.createIcons();
+    }
+}
+
+// ── Stop detection ────────────────────────────────────────────────────────────
+async function stopDetection() {
+    detectionOn = false;
+    stopBtn.disabled = true;
+
+    if (mpCamera) { await mpCamera.stop(); mpCamera = null; }
+    if (faceMesh)  { faceMesh.close();      faceMesh  = null; }
+
+    if (videoEl.srcObject) {
+        videoEl.srcObject.getTracks().forEach(t => t.stop());
+        videoEl.srcObject = null;
+    }
+
+    counter = 0;
+    alarmOn = false;
+    drowsinessBanner.style.display = "none";
+    videoContainer.style.display   = "none";
+    earMeterWrap.style.display      = "none";
+    stopBtn.style.display           = "none";
+    startBtn.style.display          = "inline-flex";
+    stopBtn.disabled                = false;
+
+    updateStatusUI("idle", "Click Start Engine — your browser will ask for camera permission.");
+}
+
+// ── UI helper ────────────────────────────────────────────────────────────────
+function updateStatusUI(state, message) {
+    statusMsg.textContent = message;
+    mainCard.classList.remove("status-idle", "status-running", "status-alert", "status-error");
+
+    const icons = {
+        running: '<i data-lucide="activity"  style="width:56px;height:56px;z-index:10;"></i>',
+        alert:   '<i data-lucide="alert-triangle" style="width:56px;height:56px;z-index:10;"></i>',
+        loading: '<i data-lucide="loader-2"  style="width:56px;height:56px;z-index:10;" class="lucide-spin-fast"></i>',
+        idle:    '<i data-lucide="power"     style="width:56px;height:56px;z-index:10;"></i>',
+        error:   '<i data-lucide="x-circle"  style="width:56px;height:56px;z-index:10;"></i>',
+    };
+
+    const titles = {
+        running: "Monitoring Active",
+        alert:   "Drowsiness Detected!",
+        loading: "Initialising…",
+        idle:    "System Idle",
+        error:   "Error",
+    };
+
+    const colors = {
+        running: "var(--success)",
+        alert:   "var(--danger)",
+        loading: "var(--primary)",
+        idle:    "var(--text-main)",
+        error:   "var(--danger)",
+    };
+
+    mainCard.classList.add("status-" + state);
+    statusTitle.textContent = titles[state] || "System Idle";
+    statusTitle.style.color = colors[state] || "var(--text-main)";
+    statusIcon.innerHTML    = icons[state]  || icons.idle;
+    lucide.createIcons();
+}
+
+// ── Button listeners ──────────────────────────────────────────────────────────
+startBtn.addEventListener("click", startDetection);
+stopBtn.addEventListener("click",  stopDetection);
+
+// Initial render
+updateStatusUI("idle", "Click Start Engine — your browser will ask for camera permission.");
 </script>
 {% endblock %}

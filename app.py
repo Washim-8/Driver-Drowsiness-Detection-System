@@ -1,6 +1,8 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import threading
 import os
+import sqlite3
+import datetime
 
 # Detection modules are only available when running locally with CV dependencies
 try:
@@ -76,6 +78,28 @@ def stop_detection_route():
         return jsonify({"status": "success", "message": "Detection stopped."})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error stopping detection: {str(e)}"})
+
+
+@app.route('/log_event', methods=['POST'])
+def log_event():
+    """Receive a drowsiness event from the browser and save it to the DB."""
+    try:
+        data = request.get_json(force=True)
+        ear  = float(data.get('ear', 0.0))
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'drowsiness_data.db')
+        conn = sqlite3.connect(db_path)
+        c    = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS drowsiness (
+                     id INTEGER PRIMARY KEY,
+                     timestamp DATETIME,
+                     eye_aspect_ratio REAL)''')
+        c.execute("INSERT INTO drowsiness (timestamp, eye_aspect_ratio) VALUES (?, ?)",
+                  (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), ear))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/status')
