@@ -1,7 +1,15 @@
 from flask import Flask, render_template, jsonify
 import threading
 import os
-from drowsiness_detection import start_detection, stop_detection
+
+# Detection modules are only available when running locally with CV dependencies
+try:
+    from drowsiness_detection import start_detection, stop_detection
+    DETECTION_AVAILABLE = True
+except ImportError:
+    DETECTION_AVAILABLE = False
+    def start_detection(**kwargs): pass
+    def stop_detection(): pass
 
 app = Flask(__name__)
 
@@ -27,7 +35,10 @@ def about_contact():
 @app.route('/start_detection')
 def start_detection_route():
     global detection_thread, detection_running
-    
+
+    if not DETECTION_AVAILABLE:
+        return jsonify({"status": "error", "message": "Detection is not available on this server. Run the app locally to use webcam detection."})
+
     # Check if detection is already running
     if detection_thread and detection_thread.is_alive():
         return jsonify({"status": "error", "message": "Drowsiness detection is already running."})
@@ -75,4 +86,5 @@ def status():
 
 
 if __name__ == '__main__':
-    app.run(debug=False, host='127.0.0.1', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
