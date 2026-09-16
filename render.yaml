@@ -1,9 +1,17 @@
 services:
   - type: web
     name: drowsiness-detection
-    env: python
+    runtime: python
+    plan: free
     buildCommand: pip install -r requirements_server.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 2 --worker-class sync --preload --timeout 120
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.0
+        value: "3.10.14"
+      - key: PORT
+        value: "10000"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_DEBUG
+        value: "false"

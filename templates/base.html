@@ -5,8 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AI Drowsiness Detection{% endblock %}</title>
     <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='icon.jpeg') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Non-blocking Google Fonts (Step 7 — Render Deployment Guide) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+    <link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"/>
+    <noscript>
+      <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"/>
+    </noscript>
+    <!-- defer stops Lucide from blocking HTML parsing (Step 8) -->
+    <script src="https://unpkg.com/lucide@latest" defer></script>
     <style>
         :root {
             --primary: #2563EB;

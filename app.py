@@ -1,8 +1,11 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, make_response
+from flask_compress import Compress
 import threading
 import os
 import sqlite3
 import datetime
+import time
+import urllib.request
 
 # Detection modules are only available when running locally with CV dependencies
 try:
@@ -15,25 +18,96 @@ except ImportError:
 
 app = Flask(__name__)
 
+# ── Flask-Compress: gzip HTML/JSON responses (~60-80% size reduction) ──────────
+app.config["COMPRESS_REGISTER"] = True
+app.config["COMPRESS_LEVEL"]    = 6      # 1 (fast) to 9 (max). 6 = balanced
+app.config["COMPRESS_MIN_SIZE"] = 500    # skip compressing responses < 500 bytes
+Compress(app)
+
 # Global variable to track the detection thread
 detection_thread = None
 detection_running = False
 
+
+# ── Keep-Alive: prevent Render free-tier from sleeping after 15 min ────────────
+def _keep_alive():
+    """
+    Daemon thread that self-pings /health every 10 minutes.
+    Prevents Render free-tier from spinning down the service.
+
+    Behaviour:
+      - On Render:  reads RENDER_EXTERNAL_URL, waits 30s, pings every 10 min
+      - Local dev:  RENDER_EXTERNAL_URL not set → exits silently
+      - Thread type: daemon → auto-killed when main process dies
+    """
+    render_url = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
+    if not render_url:
+        return  # Not on Render — skip silently (local dev safety)
+
+    ping_url = f"{render_url}/health"
+    print(f"[KeepAlive] Self-ping enabled → {ping_url} every 10 min")
+
+    # Wait 30s so Gunicorn fully starts before first ping
+    time.sleep(30)
+
+    while True:
+        try:
+            with urllib.request.urlopen(ping_url, timeout=10) as resp:
+                print(f"[KeepAlive] Pinged → HTTP {resp.status}")
+        except Exception as exc:
+            print(f"[KeepAlive] Ping failed: {exc}")
+        time.sleep(600)  # 10 minutes
+
+
+_keep_alive_thread = threading.Thread(
+    target=_keep_alive,
+    name="keep-alive",
+    daemon=True   # dies automatically when main process exits
+)
+_keep_alive_thread.start()
+
+
+# ── Cache-Control helper ───────────────────────────────────────────────────────
+def _add_cache_headers(response, seconds=3600):
+    """Attach Cache-Control headers so repeat visits load from browser cache."""
+    response.cache_control.max_age = seconds
+    response.cache_control.public  = True
+    return response
+
+
+# ── Health check routes (required by Render) ───────────────────────────────────
+@app.route("/health", methods=["GET"])
+@app.route("/healthz", methods=["GET"])
+def health():
+    """
+    Health check endpoint for Render.
+    - Must return HTTP 200
+    - No authentication, no DB calls, no ML loading
+    - Must respond in < 2 seconds
+    """
+    return jsonify({"status": "healthy"}), 200
+
+
+# ── Page routes ────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    return render_template('index.html')
+    resp = make_response(render_template('index.html'))
+    return _add_cache_headers(resp, seconds=60)   # dynamic page: 1 min
 
 
 @app.route('/about')
 def about():
-    return render_template('about.html')
+    resp = make_response(render_template('about.html'))
+    return _add_cache_headers(resp, seconds=3600)  # semi-static: 1 hour
 
 
 @app.route('/about_contact')
 def about_contact():
-    return render_template('about_contact.html')
+    resp = make_response(render_template('about_contact.html'))
+    return _add_cache_headers(resp, seconds=3600)  # semi-static: 1 hour
 
 
+# ── Detection API routes ───────────────────────────────────────────────────────
 @app.route('/start_detection')
 def start_detection_route():
     global detection_thread, detection_running

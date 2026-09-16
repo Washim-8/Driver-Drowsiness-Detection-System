@@ -1,3 +1,15 @@
+# ── Secrets — NEVER commit these ────────────────────────────────────
+.env
+.env.*
+*.env
+!.env.example
+
+# ── Node (not used here, but harmless) ───────────────────────────────
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm
+
 # Python
 __pycache__/
 *.py[cod]
